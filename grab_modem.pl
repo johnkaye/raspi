@@ -48,7 +48,7 @@ $last_address ||= q{127.0.0.1};
 #print qq{\nLast IP: $last_address\n}; # DEBUG
 
 # get password
-my $cipher_file   = q{grab_modem.cip};
+my $cipher_file   = q{/kbin/grab_modem.cip};
 my $cipher_string = q{};
 my @cipher        = [];
 
