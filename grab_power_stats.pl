@@ -10,6 +10,7 @@ use strict;
 use warnings;
 
 use IO::Socket;
+use Data::Dumper;
 
 use lib '/kbin';
 
@@ -17,7 +18,14 @@ use Grab qw{ get_content };
 
 use Date::Format qw{ time2str };
 
-my $ecu_url    = q{http://192.168.1.10/cgi-bin/home};
+my $DEBUG = 0; # if true, prints messages and doesn't update the $day_generation_file
+
+# initialise variables for current power - for rgraph display
+my $current_power = 0;
+#my $power_csv_file = '/kbin/power.csv';
+my $power_csv_file = '/var/www/htdocs/power.csv';
+
+my $ecu_url    = q{http://192.168.1.81/cgi-bin/home};
 my $eagle_host = q{192.168.1.6};
 my $eagle_port = q{5002};
 my $eagle_mac  = q{0xd8d5b90000000f85};
@@ -29,8 +37,6 @@ my $eagle_cmd = qq{<LocalCommand>
 
 my $log_file            = '/kbin/ecu.log';
 my $day_generation_file = '/kbin/generation_of_current_day.txt';
-
-my $DEBUG = 0; # if true, doesn't update the $day_generation_file
 
 my $uptime_msg = q{some time};
 my $content    = q{};
@@ -50,7 +56,10 @@ else
 	$content = $result->{'data'};
 }
 
-# print qq{\nSOLAR: \n}, $content, qq{\n\n}; # DEBUG
+if ( $DEBUG )
+{
+    print qq{\nSOLAR_HTML: \n}, $content, qq{\n\n}; # DEBUG
+}
 
 my $current_day_generation = 0;
 my $saved_day_generation   = 0;
@@ -98,7 +107,7 @@ $generated = $current_day_generation - $saved_day_generation;
 # reset generated value for a new day
 $generated = $generated < 0 ? 0 : $generated;
 
-# power is sampled every 5 minutes, so calculate average hourly value
+# power is sampled every 5 minutes, so calculate average watt-hours
 $average_solar_watts = sprintf( "%.1f", $generated * 12 * 1000 );
 
 ### get current grid power demand (watts) from Eagle smart meter reader
@@ -108,7 +117,9 @@ my $socket = IO::Socket::INET->new(
 	'PeerPort' => $eagle_port,
 	'Proto'    => 'tcp',
 	'Type'     => SOCK_STREAM,
-); ### or die "Couldn't connect to $eagle_host:$eagle_port: $!";
+    'timeout'  => 10,
+#) or die "Couldn't connect to $eagle_host:$eagle_port: $!" if $DEBUG;
+);
 
 # send the get_instantaneous_demand command
 
@@ -123,6 +134,11 @@ if ( $socket )
 	 
 	LINE: while ( my $xml_line = <$socket> )
 	{
+        #if ( $DEBUG )
+        #{
+        #    print qq{\nEAGLE-XML> $xml_line\n};
+        #}
+
 		if ( $xml_line =~ m{ <InstantaneousDemand }smx )
 		{
 			$xml_string .= $xml_line;
@@ -147,10 +163,20 @@ if ( $socket )
 		}
 	}
 
+    if ( $DEBUG )
+    {
+        print qq{\nEAGLE_XML:\n$xml_string\n};
+    }
+
 	close $socket;
 
 	# extract meter data from the xml string
 	my $meter_data = xml_data( $xml_string );
+
+    if ( $DEBUG )
+    {
+        print Dumper({ 'METER_DATA' => $meter_data });
+    }
 
 	my $multiplier = hex $meter_data->{'Multiplier'};
 	my $divisor    = hex $meter_data->{'Divisor'};
@@ -158,10 +184,22 @@ if ( $socket )
     # grid 'demand' is a 24-bit (6-character) signed integer
 	my $demand_raw = hex substr $meter_data->{'Demand'}, -6;
 
+    if ( $DEBUG )
+    {
+        print qq{\nRAW_DEMAND:  $demand_raw\n};
+        print qq{MULTIPLIER:  $multiplier\n};
+        print qq{DIVISOR:     $divisor\n};
+    }
+
     # adjust for negative value (power to the grid)
     my $demand = $demand_raw >= 2**23
                ? $demand_raw - 2**24
                : $demand_raw;
+
+    if ( $DEBUG )
+    {
+        print qq{GRID_DEMAND: $demand\n\n};
+    }
 
 	$grid_demand = ( $demand * $multiplier ) / $divisor;
 
@@ -183,10 +221,22 @@ open my $fh, '>>', $log_file or die "Can't open $log_file: $!";
 print $fh time, q{ }, qq{$average_solar_watts $grid_demand\n};
 close $fh;
 
+# write csv file for current power display
+$current_power = sprintf( "%02f", ( $average_solar_watts - $grid_demand ) / 1000 );
+
+open my $cfh, '>', $power_csv_file or die "Can't open $power_csv_file: $!";
+print $cfh qq{$current_power\n};
+close $cfh;
+
+
 exit;
 
-# xml_data subroutine: given an xml string, return a hash of data keyed by the tags
+#======================
+# Subroutine: xml_data
+#
+# given an xml string, return a hash of data keyed by the tags
 # Note: unable to install XML::Simple on a raspberry pi using CPAN
+
 sub xml_data
 {
         my ($xml_string) = @_;
