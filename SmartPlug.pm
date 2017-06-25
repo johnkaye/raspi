@@ -421,212 +421,48 @@ up to communicate with the smart plug (remotely switched GPO).
 
 =head2 new
 
-  my $plug = SmartPlug->new('plug_id' => 'AC:CF:23:21:5B:28');
+  my $plug = SmartPlug->new({ 'plug_id' => 'AC:CF:23:21:5B:28'} );
 
 Creates a SmartPlug object (connection) for the device with the given mac address.
 
 =head1 METHODS
-
-TODO: change the following to SmartPlug methods:
 
 On success the appropriate true value for each method is
 returned. On failure a false value is returned, upon which
 an error message is set and can be returned via the
 "errstr" method.
 
+=head2 status
+
+  $plug->status()
+
+Returns the on/off status of the smart plug
+
+=head2 on
+
+  $plug->on()
+
+Sends a command to turn the smart plug on.
+Returns the on/off status of the smart plug
+
+=head2 off
+
+  $plug->off()
+
+Sends a command to turn the smart plug on.
+Returns the on/off status of the smart plug
+
 =head2 errstr
 
-  print $survey->errstr();
+  print $plug->errstr();
 
-  print Monash::Survey::Base->errstr();
+  print SmartPlug->errstr();
 
 Is available as both a class and object method. The class
 "errstr" should be inspected when an object has failed to
 be created, and the object method when a method call fails
 unexpectedly. "errstr" will always contain the last known
 error.
-
-=head2 survey_id
-
-  $survey->survey_id()
-
-Returns survey id
-
-=head2 title
-
-  $survey->title()
-
-Returns survey title
-
-=head2 url_token
-
-  $survey->url_token()
-
-Returns survey url_token
-
-=head2 form_id
-
-  $survey->form_id()
-
-Returns the survey form_id
-
-=head2 can_change
-
-  $survey->can_change()
-
-Returns 1 or 0 depending if user can change their survey
-response
-
-=head2 opening_date
-
-  $survey->opening_date()
-
-Returns survey opening date
-
-=head2 closing_date
-
-  $survey->closing_date()
-
-Returns survey closing date
-
-=head2 report_date
-
-  $survey->report_date()
-
-Returns the last date that a response data report was created
-
-=head2 page_heading
-
-  $survey->page_heading()
-
-Returns the page heading for the survey type
-
-=head2 logo_text
-
-  $survey->logo_text()
-
-Returns the text that will be displayed under the Monash Uni logo
-
-=head2 created_by
-
-  $survey->created_by()
-
-Returns who created survey
-
-=head2 details
-
-  $survey->details()
-
-Returns survey details. Generally introductory text explaining
-what the survey is about
-
-=head2 type
-
-  $survey->type()
-
-Returns survey type
-
-=head2 introduction_text
-
-  $survey->introduction_text()
-
-Returns survey introduction_text. Non editable field containing
-blurb about survey. Not used by general surveys. Only for
-unit evaluation, mseq and monquest.
-
-=head2 closing_text
-
-  $survey->closing_text()
-
-Returns survey closing_text. This is a non-editable field containing
-closing text for a survey type. This field is typically used to
-hold a privacy statement.
-
-=head2 is_editor
-
-  $survey->is_editor( 'username' => 'jsmith' )
-
-Returns 1 or 0 depending whether the user is an editor or not.
-An editor is a person who did not create the survey but has been
-granted editing access.
-
-=head2 is_admin
-
-  $survey->is_admin( 'username' => 'jsmith' )
-
-Returns 1 or 0 depending whether the user created the survey, or
-if the user has been added as an editor
-
-=head2 is_open
-
-  $survey->is_open()
-
-Returns 1 or 0 depending on whether survey is open
-
-=head2 status
-
-  $survey->status()
-
-Returns 'Pending' if survey opening date is in the future,
-'Open' if the survey is open or 'Closed' if the survey is closed.
-
-=head2 is_valid
-
-  $survey->is_valid()
-
-Returns 1 if this is a valid survey for the user to do. Does
-the following checks:
-
-  - not before opening date
-  - not after closing date
-  - user has not submitted the survey (optional)
-
-Populates the errstr() with the correct message
-
-=head2 set_survey_details
-
-my $insert = $survey->set_survey_details(
-  'title'        => $title,
-  'logo_text'    => $logo_text,
-  'form_id'      => $form_id,
-  'change'       => $change,
-  'opening_date' => $opening_date,
-  'closing_date' => $closing_date,
-  'created_by'   => scalar( $user->uid() ),
-  'details'      => $details,
-  'editors'      => 'jsmith,peterh',
-);
-
-my $result  = $survey->set_survey_details(
-  'report_date'  => 1,
-);
-
-Will either create a new survey or update existing survey.  When
-updating a survey, you only need to pass the parameters that you
-want to change.
-
-On success, a reloaded survey object is returned.
-
-The C<report_date> will be updated to SYSDATE if the survey is
-closed and parmater passed is C<1>, otherwise it will be unchanged.
-
-=head2 copy
-
-  my $copy = $survey->copy(
-    'new_title'  => 'Survey_2006',
-    'created_by' => 'jsmith',
-  );
-
-Copies the existing survey details and questions to survey with
-new title. Returns survey object of new title. If fails half way
-through (e.g details created but not questions), the survey
-will need to be deleted and tried again
-
-=head2 delete
-
-  my $delete = $survey->delete();
-
-Deletes survey answers, questions, cal_types and details.
 
 
 =head1 DEPENDENCIES
@@ -639,4 +475,4 @@ L<Data::Dumper>
 
 =head1 AUTHOR
 
-John Kaye E<lt>jkaye29@gmail.comE<gt>
+John Kaye E<lt>jkaye29 @ gmail.comE<gt>
